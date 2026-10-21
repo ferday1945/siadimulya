@@ -1,0 +1,6 @@
+{
+  "name": "Sistem Informasi Pelayanan Desa Adimulya",
+  "description": "Platform digital pelayanan administrasi dan pengajuan surat online Desa Adimulya.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
