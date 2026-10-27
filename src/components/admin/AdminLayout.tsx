@@ -24,6 +24,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const {
     activeAdminTab,
     setActiveAdminTab,
+    setCurrentView,
     logout,
     switchRole,
     unreadCountAdmin,
@@ -120,18 +121,19 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
           <div className="flex items-center gap-1.5">
             <button
-              onClick={() => switchRole('warga')}
+              onClick={() => setCurrentView('public')}
               className="flex-1 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-medium rounded-md transition-colors flex items-center justify-center gap-1"
             >
-              <User className="w-3 h-3 text-emerald-400" />
-              Ke Portal Warga
+              <Home className="w-3 h-3 text-emerald-400" />
+              Halaman Utama
             </button>
             <button
               onClick={logout}
-              className="py-1.5 px-2.5 bg-rose-950/50 hover:bg-rose-900/50 text-rose-300 text-[11px] font-medium rounded-md transition-colors"
-              title="Keluar"
+              className="py-1.5 px-2.5 bg-rose-950/50 hover:bg-rose-900/50 text-rose-300 text-[11px] font-medium rounded-md transition-colors flex items-center gap-1"
+              title="Keluar dari Akun Admin"
             >
               <LogOut className="w-3 h-3" />
+              <span>Keluar</span>
             </button>
           </div>
         </div>
@@ -159,18 +161,25 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold flex items-center gap-1.5">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="hidden md:flex px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-600" />
               <span>Sistem Online Aktif</span>
             </div>
 
             <button
-              onClick={() => switchRole('warga')}
-              className="text-xs font-semibold text-slate-600 hover:text-emerald-700 border border-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors hidden sm:flex items-center gap-1.5"
+              onClick={() => setCurrentView('public')}
+              className="text-xs font-semibold text-slate-600 hover:text-emerald-700 border border-slate-300 px-3 py-1.5 rounded-lg hover:bg-slate-50 transition-colors flex items-center gap-1.5"
             >
-              <User className="w-3.5 h-3.5" />
-              Mode Warga
+              <Home className="w-3.5 h-3.5" />
+              Halaman Utama
+            </button>
+            <button
+              onClick={logout}
+              className="text-xs font-semibold text-rose-700 hover:text-rose-800 border border-rose-200 bg-rose-50 px-3 py-1.5 rounded-lg hover:bg-rose-100 transition-colors flex items-center gap-1.5"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Keluar</span>
             </button>
           </div>
         </header>

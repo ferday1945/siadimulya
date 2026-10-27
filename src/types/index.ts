@@ -145,8 +145,12 @@ export interface NotificationItem {
 
 export interface VillageStats {
   totalPenduduk: number;
+  totalLakiLaki: number;
+  totalPerempuan: number;
   totalKk: number;
   totalDusun: number;
+  totalRw: number;
+  totalRt: number;
   luasWilayah: string;
   jamPelayanan: string;
   alamatKantor: string;
@@ -154,4 +158,11 @@ export interface VillageStats {
   kontakWa: string;
   emailDesa: string;
   kepalaDesa: string;
+  sekretarisDesa: string;
+  websiteResmi: string;
+  tahunPemekaran: string;
+  dusunList: string[];
+  pekerjaanStats: { label: string; count: number }[];
+  pendidikanStats: { label: string; count: number }[];
+  lahanStats: { label: string; area: string }[];
 }

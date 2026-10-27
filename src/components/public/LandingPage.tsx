@@ -29,7 +29,14 @@ import {
 } from 'lucide-react';
 
 export const LandingPage: React.FC = () => {
-  const { setCurrentView, switchRole, setSelectedServiceForForm, villageStats } = useApp();
+  const {
+    setCurrentView,
+    setSelectedServiceForForm,
+    setActiveCitizenTab,
+    isLoggedInWarga,
+    showToast,
+    villageStats,
+  } = useApp();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('semua');
   const [previewService, setPreviewService] = useState<ServiceItem | null>(null);
@@ -69,7 +76,13 @@ export const LandingPage: React.FC = () => {
 
   const handleAjukan = (service: ServiceItem) => {
     setSelectedServiceForForm(service);
-    switchRole('warga');
+    if (isLoggedInWarga) {
+      setActiveCitizenTab('formulir');
+      setCurrentView('citizen');
+    } else {
+      showToast(`Silakan login warga terlebih dahulu untuk mengajukan ${service.title}. Belum punya akun? Klik Daftar.`, 'info');
+      setCurrentView('login');
+    }
   };
 
   return (
@@ -98,16 +111,22 @@ export const LandingPage: React.FC = () => {
               <button
                 onClick={() => {
                   setSelectedServiceForForm(serviceCatalog[0]);
-                  switchRole('warga');
+                  if (isLoggedInWarga) {
+                    setActiveCitizenTab('formulir');
+                    setCurrentView('citizen');
+                  } else {
+                    showToast('Silakan login warga terlebih dahulu untuk mengajukan surat permohonan.', 'info');
+                    setCurrentView('login');
+                  }
                 }}
-                className="w-full sm:w-auto px-6 py-3.5 bg-[#198754] hover:bg-emerald-700 text-white font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-sm"
+                className="w-full sm:w-auto px-6 py-3.5 bg-[#198754] hover:bg-emerald-700 text-white font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-sm cursor-pointer"
               >
                 <Send className="w-4 h-4" />
                 Ajukan Pelayanan Sekarang
               </button>
               <button
                 onClick={() => setCurrentView('login')}
-                className="w-full sm:w-auto px-6 py-3.5 bg-white border border-slate-300 hover:border-slate-400 text-slate-700 font-semibold rounded-xl shadow-2xs hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 text-sm"
+                className="w-full sm:w-auto px-6 py-3.5 bg-white border border-slate-300 hover:border-slate-400 text-slate-700 font-semibold rounded-xl shadow-2xs hover:bg-slate-50 transition-colors flex items-center justify-center gap-2 text-sm cursor-pointer"
               >
                 <Users className="w-4 h-4 text-slate-500" />
                 Login Portal Warga
@@ -388,90 +407,189 @@ export const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* 5. TENTANG DESA & INFORMASI KONTAK */}
+      {/* 5. TENTANG DESA & INFORMASI RESMI */}
       <section id="tentang" className="py-16 bg-white border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">
-                Pemerintah Desa
-              </p>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
-                Tentang Desa Adimulya
-              </h2>
-              <p className="text-sm text-slate-600 mt-4 leading-relaxed">
-                Desa Adimulya merupakan salah satu desa di Kecamatan Wanareja, Kabupaten Cilacap, Jawa Tengah. Dikenal dengan masyarakat yang guyub rukun, agraris, serta berkomitmen mewujudkan kemandirian desa melalui pemanfaatan teknologi informasi untuk pelayanan publik yang prima.
-              </p>
+          <div className="mb-10 text-center max-w-2xl mx-auto">
+            <div className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-800 mb-2 bg-emerald-100/70 px-3 py-1 rounded-full">
+              <span>Profil Wilayah & Demografi</span>
+              <span>·</span>
+              <a
+                href="https://desaadimulya.com/"
+                target="_blank"
+                rel="noreferrer"
+                className="underline hover:text-emerald-950 font-bold"
+              >
+                Website Resmi: desaadimulya.com ↗
+              </a>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              Mengenal Desa Adimulya
+            </h2>
+            <p className="text-sm text-slate-600 mt-2">
+              Desa mandiri di Kecamatan Wanareja, Kabupaten Cilacap, dengan potensi pertanian, perkebunan, dan pelayanan masyarakat yang guyub rukun.
+            </p>
+          </div>
 
-              <div className="mt-6 space-y-3 font-sans text-xs text-slate-700">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-900 w-32">Kepala Desa:</span>
-                  <span>{villageStats.kepalaDesa}</span>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Left Column: Demografi & Pemerintahan */}
+            <div className="lg:col-span-7 space-y-6">
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <h3 className="text-base font-bold text-slate-900 mb-3 flex items-center justify-between">
+                  <span>Struktur Pemerintahan & Kependudukan</span>
+                  <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-100/80 px-2.5 py-0.5 rounded-full">
+                    Sensus Resmi Desa
+                  </span>
+                </h3>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center mb-5">
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                    <div className="text-lg sm:text-xl font-black text-emerald-800 font-mono">10.429</div>
+                    <div className="text-[11px] text-slate-500 font-medium">Jiwa Penduduk</div>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                    <div className="text-lg sm:text-xl font-black text-slate-800 font-mono">3.120</div>
+                    <div className="text-[11px] text-slate-500 font-medium">Kepala Keluarga</div>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                    <div className="text-lg sm:text-xl font-black text-slate-800 font-mono">10</div>
+                    <div className="text-[11px] text-slate-500 font-medium">Wilayah Dusun</div>
+                  </div>
+                  <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                    <div className="text-lg sm:text-xl font-black text-slate-800 font-mono">20 / 61</div>
+                    <div className="text-[11px] text-slate-500 font-medium">RW / RT</div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-900 w-32">Kecamatan / Kab:</span>
-                  <span>Wanareja / Cilacap</span>
+
+                <div className="space-y-2.5 text-xs text-slate-700 divide-y divide-slate-200/60 font-sans">
+                  <div className="pt-2 flex items-center justify-between">
+                    <span className="font-semibold text-slate-800">Kepala Desa:</span>
+                    <span className="font-bold text-emerald-900">{villageStats.kepalaDesa}</span>
+                  </div>
+                  <div className="pt-2 flex items-center justify-between">
+                    <span className="font-semibold text-slate-800">Sekretaris Desa:</span>
+                    <span className="font-medium text-slate-700">{villageStats.sekretarisDesa}</span>
+                  </div>
+                  <div className="pt-2 flex items-center justify-between">
+                    <span className="font-semibold text-slate-800">Komposisi Penduduk:</span>
+                    <span>5.241 Laki-laki (50,3%) · 5.188 Perempuan (49,7%)</span>
+                  </div>
+                  <div className="pt-2 flex items-center justify-between">
+                    <span className="font-semibold text-slate-800">Sejarah Pembentukan:</span>
+                    <span>Tahun 1989 (Pemekaran resmi dari Desa Wanareja)</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-900 w-32">Jumlah Dusun:</span>
-                  <span>4 Dusun (Krajan, Cikuning, Margasari, Mekarsari)</span>
+              </div>
+
+              {/* 10 Dusun Adimulya Pills */}
+              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3 flex items-center gap-1.5">
+                  <MapPin className="w-4 h-4 text-emerald-700" />
+                  Daftar 10 Wilayah Dusun di Desa Adimulya
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {villageStats.dusunList.map((dusun, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2.5 py-1 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 shadow-2xs"
+                    >
+                      {dusun}
+                    </span>
+                  ))}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-900 w-32">Jam Pelayanan:</span>
-                  <span className="text-emerald-800 font-semibold">{villageStats.jamPelayanan}</span>
+
+                <div className="mt-4 pt-4 border-t border-slate-200/70 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-slate-600">
+                  <div className="bg-white p-2 rounded-lg border border-slate-200 text-center">
+                    <span className="font-bold block text-emerald-800">424 Ha</span>
+                    <span>Persawahan</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-slate-200 text-center">
+                    <span className="font-bold block text-emerald-800">350 Ha</span>
+                    <span>Perkebunan</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-slate-200 text-center">
+                    <span className="font-bold block text-emerald-800">175 Ha</span>
+                    <span>Perladangan</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-lg border border-slate-200 text-center">
+                    <span className="font-bold block text-emerald-800">76 Ha</span>
+                    <span>Peternakan</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Contact Card */}
-            <div id="kontak" className="bg-slate-50 p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-2xs">
-              <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-emerald-700" />
+            {/* Right Column: Contact Card */}
+            <div id="kontak" className="lg:col-span-5 bg-slate-900 text-white p-6 sm:p-8 rounded-2xl shadow-md border border-slate-800">
+              <div className="flex items-center gap-2 mb-2 text-emerald-400 text-xs font-semibold uppercase tracking-wider">
+                <Building2 className="w-4 h-4" />
+                Pusat Pelayanan Warga
+              </div>
+              <h3 className="text-xl font-bold text-white mb-5">
                 Kantor Balai Desa Adimulya
               </h3>
 
-              <div className="space-y-4 text-xs text-slate-600">
+              <div className="space-y-4 text-xs text-slate-300">
                 <div className="flex items-start gap-3">
-                  <MapPin className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                  <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-semibold text-slate-900 block">Alamat Kantor:</span>
+                    <span className="font-semibold text-white block mb-0.5">Alamat Kantor:</span>
                     <span>{villageStats.alamatKantor}</span>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Phone className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                  <Phone className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-semibold text-slate-900 block">Telepon & WhatsApp Pelayanan:</span>
-                    <span>Telp: {villageStats.kontakTelepon} · WA: {villageStats.kontakWa}</span>
+                    <span className="font-semibold text-white block mb-0.5">Telepon & WhatsApp:</span>
+                    <span>Telp: {villageStats.kontakTelepon} · WhatsApp: {villageStats.kontakWa}</span>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Mail className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                  <Mail className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-semibold text-slate-900 block">Email Resmi:</span>
+                    <span className="font-semibold text-white block mb-0.5">Email Resmi Pelayanan:</span>
                     <span>{villageStats.emailDesa}</span>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Clock className="w-4 h-4 text-emerald-700 shrink-0 mt-0.5" />
+                  <Clock className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <span className="font-semibold text-slate-900 block">Waktu Operasional:</span>
-                    <span>Senin s/d Jumat (08.00 - 15.30 WIB). Pelayanan online dibuka 24 jam.</span>
+                    <span className="font-semibold text-white block mb-0.5">Jam Operasional Balai Desa:</span>
+                    <span>{villageStats.jamPelayanan}</span>
+                    <span className="block text-[11px] text-emerald-300 mt-0.5">
+                      ✓ Pengajuan berkas online via portal warga dibuka 24 jam setiap hari.
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-6 pt-4 border-t border-slate-200">
+              <div className="mt-8 pt-5 border-t border-slate-800 space-y-3">
                 <button
-                  onClick={() => setCurrentView('login')}
-                  className="w-full py-2.5 bg-[#198754] hover:bg-emerald-700 text-white font-semibold text-xs rounded-lg transition-colors flex items-center justify-center gap-2"
+                  onClick={() => {
+                    if (isLoggedInWarga) {
+                      setActiveCitizenTab('dashboard');
+                      setCurrentView('citizen');
+                    } else {
+                      setCurrentView('login');
+                    }
+                  }}
+                  className="w-full py-3 bg-[#198754] hover:bg-emerald-600 text-white font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
                 >
                   <Smartphone className="w-4 h-4" />
-                  Mulai Pengajuan Online Sekarang
+                  {isLoggedInWarga ? 'Buka Dashboard Warga' : 'Masuk ke Portal Warga'}
                 </button>
+
+                <a
+                  href="https://desaadimulya.com/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                >
+                  Kunjungi Website Resmi Desa (desaadimulya.com) ↗
+                </a>
               </div>
             </div>
           </div>
@@ -506,8 +624,7 @@ export const LandingPage: React.FC = () => {
               <p className="text-white font-semibold text-sm mb-3">Akses Sistem</p>
               <ul className="space-y-2">
                 <li><button onClick={() => setCurrentView('login')} className="hover:text-emerald-400">Login Akun Warga</button></li>
-                <li><button onClick={() => setCurrentView('register')} className="hover:text-emerald-400">Pendaftaran Akun Baru</button></li>
-                <li><button onClick={() => switchRole('admin')} className="hover:text-emerald-400">Portal Petugas Desa</button></li>
+                <li><button onClick={() => setCurrentView('admin-login')} className="hover:text-emerald-400">Portal Petugas Desa (Admin)</button></li>
               </ul>
             </div>
           </div>

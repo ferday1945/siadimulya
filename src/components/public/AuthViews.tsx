@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 export const LoginView: React.FC = () => {
-  const { login, setCurrentView } = useApp();
+  const { login, setCurrentView, selectedServiceForForm } = useApp();
   const [emailOrNik, setEmailOrNik] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -49,13 +49,6 @@ export const LoginView: React.FC = () => {
     login('siwi.siswanto@gmail.com', '123456');
   };
 
-  const handleQuickLoginAdmin = () => {
-    setEmailOrNik('admin@desa-adimulya.id');
-    setPassword('admin123');
-    setErrorMessage('');
-    login('admin@desa-adimulya.id', 'admin123');
-  };
-
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50">
       <div className="max-w-md w-full space-y-6 bg-white p-8 sm:p-10 rounded-2xl shadow-sm border border-slate-200">
@@ -71,30 +64,48 @@ export const LoginView: React.FC = () => {
           </p>
         </div>
 
+        {/* Selected Service Notice */}
+        {selectedServiceForForm && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-950 text-xs rounded-xl flex items-start gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-600 mt-1.5 shrink-0" />
+            <div>
+              <span className="font-bold block text-emerald-900">
+                Permohonan: {selectedServiceForForm.title}
+              </span>
+              <span className="text-[11px] text-emerald-800">
+                Silakan masuk dengan akun warga Anda untuk melanjutkan pengajuan. Belum punya akun? Klik <strong>Daftar Akun Baru</strong> di bawah.
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Demo Quick-Fill Pill Group */}
         <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-          <p className="text-[11px] font-semibold text-slate-600 mb-2 flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            Akses Cepat Mode Simulasi Demo:
-          </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[11px] font-semibold text-slate-600 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              Akses Cepat Pengujian:
+            </p>
             <button
               type="button"
-              onClick={handleQuickLoginCitizen}
-              className="px-2.5 py-1.5 bg-white border border-emerald-300 hover:border-emerald-500 text-emerald-800 text-xs rounded-lg font-medium shadow-2xs hover:bg-emerald-50/50 transition-colors text-left flex items-center gap-1.5"
+              onClick={() => setCurrentView('admin-login')}
+              className="text-[11px] font-semibold text-slate-700 hover:text-emerald-700 underline flex items-center gap-1"
             >
-              <User className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span className="truncate">Warga: Siwi Siswanto</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleQuickLoginAdmin}
-              className="px-2.5 py-1.5 bg-white border border-slate-300 hover:border-slate-500 text-slate-800 text-xs rounded-lg font-medium shadow-2xs hover:bg-slate-50 transition-colors text-left flex items-center gap-1.5"
-            >
-              <Shield className="w-3.5 h-3.5 text-slate-600 shrink-0" />
-              <span className="truncate">Petugas Admin</span>
+              <Shield className="w-3 h-3" />
+              Petugas Desa
             </button>
           </div>
+          <button
+            type="button"
+            onClick={handleQuickLoginCitizen}
+            className="w-full px-3 py-2 bg-white border border-emerald-300 hover:border-emerald-500 text-emerald-800 text-xs rounded-lg font-medium shadow-2xs hover:bg-emerald-50/50 transition-colors text-left flex items-center justify-between"
+          >
+            <div className="flex items-center gap-2">
+              <User className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <span>Gunakan Akun Contoh: <strong>Siwi Siswanto</strong></span>
+            </div>
+            <span className="text-[11px] text-emerald-600 font-bold">Masuk Cepat →</span>
+          </button>
         </div>
 
         {errorMessage && (
@@ -201,13 +212,17 @@ export const LoginView: React.FC = () => {
 };
 
 export const RegisterView: React.FC = () => {
-  const { register, setCurrentView } = useApp();
+  const { register, setCurrentView, villageStats } = useApp();
   const [formData, setFormData] = useState({
     nik: '',
     noKk: '',
     nama: '',
     noHp: '',
     email: '',
+    dusun: 'Dusun Cihandiwung Lor',
+    rt: '001',
+    rw: '001',
+    alamat: '',
     password: '',
     confirmPassword: '',
     agreeTerms: false,
@@ -267,6 +282,10 @@ export const RegisterView: React.FC = () => {
       nama: formData.nama,
       noHp: formData.noHp,
       email: formData.email,
+      dusun: formData.dusun,
+      rt: formData.rt,
+      rw: formData.rw,
+      alamat: formData.alamat || `RT ${formData.rt} / RW ${formData.rw}, ${formData.dusun}`,
       password: formData.password,
     });
 
@@ -357,6 +376,51 @@ export const RegisterView: React.FC = () => {
               />
             </div>
             {errors.nama && <p className="text-[11px] text-rose-600 mt-1">{errors.nama}</p>}
+          </div>
+
+          {/* Wilayah Dusun & RT/RW */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Wilayah Dusun (Desa Adimulya) *
+              </label>
+              <select
+                value={formData.dusun}
+                onChange={(e) => setFormData({ ...formData, dusun: e.target.value })}
+                className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white"
+              >
+                {villageStats.dusunList.map((dusun, idx) => (
+                  <option key={idx} value={dusun}>
+                    {dusun}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                RT / RW
+              </label>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  maxLength={3}
+                  value={formData.rt}
+                  onChange={(e) => setFormData({ ...formData, rt: e.target.value.replace(/\D/g, '') })}
+                  placeholder="RT"
+                  className="w-1/2 px-2 py-2 text-sm border border-slate-300 rounded-lg text-center"
+                />
+                <span className="text-slate-400">/</span>
+                <input
+                  type="text"
+                  maxLength={3}
+                  value={formData.rw}
+                  onChange={(e) => setFormData({ ...formData, rw: e.target.value.replace(/\D/g, '') })}
+                  placeholder="RW"
+                  className="w-1/2 px-2 py-2 text-sm border border-slate-300 rounded-lg text-center"
+                />
+              </div>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

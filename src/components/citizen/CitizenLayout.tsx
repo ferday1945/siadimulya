@@ -30,6 +30,7 @@ export const CitizenLayout: React.FC<CitizenLayoutProps> = ({ children }) => {
   const {
     activeCitizenTab,
     setActiveCitizenTab,
+    setCurrentView,
     citizen,
     logout,
     switchRole,
@@ -305,18 +306,19 @@ export const CitizenLayout: React.FC<CitizenLayoutProps> = ({ children }) => {
 
         <div className="flex items-center gap-1.5">
           <button
-            onClick={() => switchRole('admin')}
-            className="flex-1 py-1.5 px-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100 hover:text-white text-[11px] rounded transition-colors flex items-center justify-center gap-1"
+            onClick={() => setCurrentView('public')}
+            className="flex-1 py-1.5 px-2 bg-emerald-800/80 hover:bg-emerald-700 text-emerald-100 hover:text-white text-[11px] rounded transition-colors flex items-center justify-center gap-1 font-medium"
           >
-            <Shield className="w-3 h-3" />
-            <span>Admin</span>
+            <Home className="w-3 h-3" />
+            <span>Halaman Utama</span>
           </button>
           <button
             onClick={logout}
-            className="py-1.5 px-2.5 bg-emerald-800/80 hover:bg-rose-900 text-emerald-200 hover:text-rose-100 text-[11px] rounded transition-colors"
-            title="Keluar"
+            className="py-1.5 px-2 bg-emerald-800/80 hover:bg-rose-900 text-emerald-200 hover:text-rose-100 text-[11px] rounded transition-colors flex items-center gap-1 font-medium"
+            title="Keluar dari Akun"
           >
             <LogOut className="w-3 h-3" />
+            <span>Keluar</span>
           </button>
         </div>
       </div>

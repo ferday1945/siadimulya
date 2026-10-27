@@ -20,8 +20,8 @@ import {
 } from '../data/mockData';
 
 interface AppContextType {
-  currentView: 'public' | 'login' | 'register' | 'otp' | 'citizen' | 'admin';
-  setCurrentView: (view: 'public' | 'login' | 'register' | 'otp' | 'citizen' | 'admin') => void;
+  currentView: 'public' | 'login' | 'register' | 'otp' | 'citizen' | 'admin' | 'admin-login';
+  setCurrentView: (view: 'public' | 'login' | 'register' | 'otp' | 'citizen' | 'admin' | 'admin-login') => void;
   activeCitizenTab: string;
   setActiveCitizenTab: (tab: string) => void;
   activeAdminTab: string;
@@ -40,7 +40,10 @@ interface AppContextType {
   setSelectedOfficialDoc: (sub: ApplicationSubmission | null) => void;
 
   // Auth & Navigation
+  isLoggedInWarga: boolean;
+  isLoggedInAdmin: boolean;
   login: (emailOrNik: string, pass: string) => { success: boolean; message: string; role: 'warga' | 'admin' };
+  loginAdmin: (username: string, pass: string) => { success: boolean; message: string };
   register: (data: Partial<CitizenProfile> & { password: string }) => { success: boolean; message: string; email: string };
   verifyOtp: (code: string) => { success: boolean; message: string };
   logout: () => void;
@@ -66,6 +69,7 @@ interface AppContextType {
     adminNotes?: string,
     officialLetterNo?: string
   ) => void;
+  deleteSubmission: (submissionId: string) => void;
   updateCitizenByAdmin: (updated: CitizenProfile) => void;
 
   // Notifications
@@ -96,13 +100,31 @@ const STORAGE_KEYS = {
   SUBMISSIONS: 'desa_adimulya_submissions',
   NOTIFICATIONS: 'desa_adimulya_notifications',
   ONBOARDING: 'desa_adimulya_has_seen_onboarding',
+  IS_LOGGED_IN_WARGA: 'desa_adimulya_is_logged_in_warga',
+  IS_LOGGED_IN_ADMIN: 'desa_adimulya_is_logged_in_admin',
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentView, setCurrentView] = useState<'public' | 'login' | 'register' | 'otp' | 'citizen' | 'admin'>('public');
+  const [currentView, setCurrentView] = useState<'public' | 'login' | 'register' | 'otp' | 'citizen' | 'admin' | 'admin-login'>('public');
   const [activeCitizenTab, setActiveCitizenTab] = useState<string>('dashboard');
   const [activeAdminTab, setActiveAdminTab] = useState<string>('dashboard');
-  const [pendingOtpEmail, setPendingOtpEmail] = useState<string>('budi.santoso@gmail.com');
+  const [pendingOtpEmail, setPendingOtpEmail] = useState<string>('siwi.siswanto@gmail.com');
+
+  const [isLoggedInWarga, setIsLoggedInWarga] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN_WARGA) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [isLoggedInAdmin, setIsLoggedInAdmin] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(STORAGE_KEYS.IS_LOGGED_IN_ADMIN) === 'true';
+    } catch {
+      return false;
+    }
+  });
 
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState<boolean>(() => {
     try {
@@ -140,19 +162,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
+  // Real user submissions only; clean out any legacy hardcoded demo IDs
   const [submissions, setSubmissions] = useState<ApplicationSubmission[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.SUBMISSIONS);
-      return saved ? JSON.parse(saved) : initialSubmissions;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(
+            (item: ApplicationSubmission) =>
+              !['sub-001', 'sub-002', 'sub-003', 'sub-004', 'sub-005', 'sub-006'].includes(item.id)
+          );
+        }
+      }
+      return initialSubmissions;
     } catch {
       return initialSubmissions;
     }
   });
 
+  // Real user notifications only; clean out any legacy mock notifications
   const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
-      return saved ? JSON.parse(saved) : initialNotifications;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed.filter(
+            (n: NotificationItem) =>
+              !['sub-001', 'sub-002', 'sub-003', 'sub-004', 'sub-005', 'sub-006'].includes(n.applicationId || '') &&
+              !['notif-001', 'notif-002', 'notif-003', 'notif-004'].includes(n.id)
+          );
+        }
+      }
+      return initialNotifications;
     } catch {
       return initialNotifications;
     }
@@ -178,10 +221,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem(STORAGE_KEYS.FAMILIES, JSON.stringify(familyCards));
       localStorage.setItem(STORAGE_KEYS.SUBMISSIONS, JSON.stringify(submissions));
       localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+      localStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN_WARGA, String(isLoggedInWarga));
+      localStorage.setItem(STORAGE_KEYS.IS_LOGGED_IN_ADMIN, String(isLoggedInAdmin));
     } catch (e) {
       console.warn('Storage sync issue', e);
     }
-  }, [citizen, allCitizens, familyCards, submissions, notifications]);
+  }, [citizen, allCitizens, familyCards, submissions, notifications, isLoggedInWarga, isLoggedInAdmin]);
 
   const startOnboarding = () => {
     setIsOnboardingOpen(true);
@@ -197,95 +242,207 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Auth
-  const login = (emailOrNik: string, pass: string): { success: boolean; message: string; role: 'warga' | 'admin' } => {
-    const cleanInput = emailOrNik.trim().toLowerCase();
-    // Admin check
-    if (cleanInput.includes('admin') || cleanInput === 'admin@desa-adimulya.id') {
+  // Admin Login Handler: username & password 'admin123*'
+  const loginAdmin = (username: string, pass: string): { success: boolean; message: string } => {
+    const cleanUser = username.trim().toLowerCase();
+    const cleanPass = pass.trim();
+
+    const isMatchUser =
+      cleanUser === 'admin' ||
+      cleanUser === 'admin123*' ||
+      cleanUser === 'admin@desaadimulya.com' ||
+      cleanUser === 'admin@desa-adimulya.id';
+    const isMatchPass = cleanPass === 'admin123*';
+
+    if (isMatchUser && isMatchPass) {
+      setIsLoggedInAdmin(true);
       setCurrentView('admin');
       setActiveAdminTab('dashboard');
-      showToast('Berhasil masuk sebagai Petugas Pelayanan Desa Adimulya', 'info');
-      return { success: true, message: 'Masuk sebagai Admin Perangkat Desa', role: 'admin' };
+      showToast('Berhasil masuk sebagai Petugas Pelayanan Desa Adimulya', 'success');
+      return { success: true, message: 'Masuk sebagai Admin Perangkat Desa' };
     }
 
-    // Citizen check
+    return {
+      success: false,
+      message: 'Username atau kata sandi admin salah. Gunakan username dan password: admin123*',
+    };
+  };
+
+  // Citizen Login Handler
+  const login = (emailOrNik: string, pass: string): { success: boolean; message: string; role: 'warga' | 'admin' } => {
+    const cleanInput = emailOrNik.trim().toLowerCase();
+    const cleanPass = pass.trim();
+
+    // If entered admin credentials in general login
+    if (
+      (cleanInput === 'admin' || cleanInput === 'admin123*' || cleanInput.includes('admin')) &&
+      cleanPass === 'admin123*'
+    ) {
+      setIsLoggedInAdmin(true);
+      setCurrentView('admin');
+      setActiveAdminTab('dashboard');
+      showToast('Berhasil masuk sebagai Admin Desa Adimulya', 'success');
+      return { success: true, message: 'Masuk sebagai Admin Desa', role: 'admin' };
+    }
+
+    // Check citizen match
     const found = allCitizens.find(
-      (c) => c.email.toLowerCase() === cleanInput || c.nik === cleanInput
+      (c) =>
+        c.nik.toLowerCase() === cleanInput ||
+        c.email.toLowerCase() === cleanInput ||
+        c.noHp === cleanInput
     );
 
-    if (found || cleanInput === 'budi' || cleanInput.includes('budi') || pass === '123456' || pass.length >= 6) {
-      const activeUser = found || defaultCitizenProfile;
-      setCitizen(activeUser);
+    if (found) {
+      setCitizen(found);
+      setIsLoggedInWarga(true);
       setCurrentView('citizen');
       setActiveCitizenTab('dashboard');
-      showToast(`Selamat datang kembali, ${activeUser.nama}!`, 'success');
-      
-      // Auto-open onboarding if not completed yet
-      if (!hasCompletedOnboarding) {
-        setIsOnboardingOpen(true);
-      }
+      showToast(`Selamat datang kembali, ${found.nama}!`, 'success');
       return { success: true, message: 'Login berhasil', role: 'warga' };
     }
 
-    return { success: false, message: 'Email / NIK atau password tidak sesuai. Coba akun demo atau klik tombol cepat.', role: 'warga' };
+    // Allow quick citizen login for prototype if valid NIK length or password provided
+    if (cleanInput.length >= 4) {
+      const customCitizen: CitizenProfile = {
+        ...defaultCitizenProfile,
+        id: `cit-${Date.now()}`,
+        nik: cleanInput.length === 16 ? cleanInput : defaultCitizenProfile.nik,
+        nama: cleanInput.includes('@') ? cleanInput.split('@')[0] : (citizen.nama || 'Warga Desa Adimulya'),
+        email: cleanInput.includes('@') ? cleanInput : `${cleanInput}@warga.desa.id`,
+      };
+      setCitizen(customCitizen);
+      setAllCitizens((prev) => [customCitizen, ...prev]);
+      setIsLoggedInWarga(true);
+      setCurrentView('citizen');
+      setActiveCitizenTab('dashboard');
+      showToast(`Selamat datang, ${customCitizen.nama}!`, 'success');
+      return { success: true, message: 'Login berhasil', role: 'warga' };
+    }
+
+    return {
+      success: false,
+      message: 'NIK atau Email tidak ditemukan. Silakan registrasi terlebih dahulu.',
+      role: 'warga',
+    };
   };
 
-  const register = (data: Partial<CitizenProfile> & { password: string }) => {
-    if (!data.nik || data.nik.length < 16) {
-      return { success: false, message: 'NIK harus berjumlah 16 digit angka.', email: '' };
-    }
-    if (!data.nama) {
-      return { success: false, message: 'Nama lengkap wajib diisi.', email: '' };
-    }
-    if (!data.email) {
-      return { success: false, message: 'Email aktif wajib diisi.', email: '' };
+  const register = (
+    data: Partial<CitizenProfile> & { password: string }
+  ): { success: boolean; message: string; email: string } => {
+    const existing = allCitizens.find(
+      (c) => c.nik === data.nik || (data.email && c.email.toLowerCase() === data.email.toLowerCase())
+    );
+
+    if (existing) {
+      return {
+        success: false,
+        message: 'NIK atau Email sudah terdaftar di basis data kependudukan desa.',
+        email: data.email || '',
+      };
     }
 
     const newCitizen: CitizenProfile = {
-      ...defaultCitizenProfile,
-      ...data,
       id: `cit-${Date.now()}`,
-      nik: data.nik,
-      noKk: data.noKk || '3301022809080015',
-      nama: data.nama,
-      email: data.email,
+      nik: data.nik || `330102${Date.now().toString().slice(-10)}`,
+      noKk: data.noKk || '3301022809080099',
+      nama: data.nama || 'Warga Baru Adimulya',
+      jenisKelamin: data.jenisKelamin || 'Laki-laki',
+      tempatLahir: data.tempatLahir || 'Cilacap',
+      tanggalLahir: data.tanggalLahir || '1995-01-01',
+      statusPerkawinan: data.statusPerkawinan || 'Belum Kawin',
+      agama: data.agama || 'Islam',
+      pendidikan: data.pendidikan || 'SMA / Sederajat',
+      pekerjaan: data.pekerjaan || 'Wiraswasta',
+      golDarah: data.golDarah || 'B',
+      email: data.email || 'warga.baru@desaadimulya.com',
       noHp: data.noHp || '0812-3456-7890',
+      alamat: data.alamat || 'Dusun Krajan',
+      rt: data.rt || '001',
+      rw: data.rw || '001',
+      dusun: data.dusun || 'Dusun Cidubang',
+      desa: 'Adimulya',
+      kecamatan: 'Wanareja',
+      kabupaten: 'Cilacap',
+      provinsi: 'Jawa Tengah',
+      kodePos: '53265',
     };
 
     setCitizen(newCitizen);
     setAllCitizens((prev) => [newCitizen, ...prev]);
-    setPendingOtpEmail(data.email);
+
+    // Create initial family card
+    const newFamily: FamilyCard = {
+      noKk: newCitizen.noKk,
+      kepalaKeluarga: newCitizen.nama,
+      alamat: newCitizen.alamat,
+      rt: newCitizen.rt,
+      rw: newCitizen.rw,
+      dusun: newCitizen.dusun,
+      desa: newCitizen.desa,
+      kecamatan: newCitizen.kecamatan,
+      kabupaten: newCitizen.kabupaten,
+      provinsi: newCitizen.provinsi,
+      kodePos: newCitizen.kodePos,
+      telepon: newCitizen.noHp,
+      email: newCitizen.email,
+      members: [
+        {
+          id: `mem-${Date.now()}-1`,
+          noKk: newCitizen.noKk,
+          nik: newCitizen.nik,
+          nama: newCitizen.nama,
+          jenisKelamin: newCitizen.jenisKelamin,
+          hubungan: 'Kepala Keluarga',
+          tempatLahir: newCitizen.tempatLahir,
+          tanggalLahir: newCitizen.tanggalLahir,
+          agama: newCitizen.agama,
+          pendidikan: newCitizen.pendidikan,
+          pekerjaan: newCitizen.pekerjaan,
+          statusPerkawinan: newCitizen.statusPerkawinan,
+        },
+      ],
+    };
+    setFamilyCards((prev) => [newFamily, ...prev]);
+
+    setPendingOtpEmail(newCitizen.email);
     setCurrentView('otp');
-    return { success: true, message: 'Pendaftaran berhasil. Silakan verifikasi OTP.', email: data.email };
+    return {
+      success: true,
+      message: 'Data registrasi tersimpan. Silakan masukkan kode verifikasi.',
+      email: newCitizen.email,
+    };
   };
 
-  const verifyOtp = (code: string) => {
-    if (code.trim() === '123456' || code.length === 6) {
+  const verifyOtp = (code: string): { success: boolean; message: string } => {
+    if (code.length === 6) {
+      setIsLoggedInWarga(true);
       setCurrentView('citizen');
       setActiveCitizenTab('dashboard');
-      showToast('Verifikasi akun berhasil! Selamat datang di Portal Warga Desa Adimulya.', 'success');
-      if (!hasCompletedOnboarding) {
-        setIsOnboardingOpen(true);
-      }
-      return { success: true, message: 'Akun Anda berhasil diverifikasi.' };
+      showToast(`Pendaftaran berhasil! Selamat datang, ${citizen.nama}.`, 'success');
+      return { success: true, message: 'Verifikasi akun berhasil.' };
     }
-    return { success: false, message: 'Kode OTP tidak sesuai. Gunakan kode simulasi demo 123456.' };
+    return { success: false, message: 'Kode OTP tidak valid. Masukkan 6 digit angka.' };
   };
 
   const logout = () => {
+    setIsLoggedInWarga(false);
+    setIsLoggedInAdmin(false);
+    localStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN_WARGA);
+    localStorage.removeItem(STORAGE_KEYS.IS_LOGGED_IN_ADMIN);
     setCurrentView('public');
     showToast('Anda telah keluar dari sistem pelayanan.', 'info');
   };
 
   const switchRole = (role: 'warga' | 'admin') => {
-    if (role === 'warga') {
-      setCurrentView('citizen');
-      setActiveCitizenTab('dashboard');
-      showToast('Beralih ke mode Warga (Budi Santoso)', 'info');
+    if (role === 'admin') {
+      setCurrentView('admin-login');
     } else {
-      setCurrentView('admin');
-      setActiveAdminTab('dashboard');
-      showToast('Beralih ke mode Petugas Desa (Admin Pelayanan)', 'info');
+      if (isLoggedInWarga) {
+        setCurrentView('citizen');
+      } else {
+        setCurrentView('login');
+      }
     }
   };
 
@@ -385,13 +542,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setSubmissions((prev) => [newSub, ...prev]);
 
-    // Send notification
+    // Send notification to citizen & admin
     const newNotifWarga: NotificationItem = {
       id: `notif-${Date.now()}`,
       title: isDraft ? `Draf Disimpan: ${service.title}` : `Pengajuan Terkirim: ${service.title}`,
       message: isDraft
         ? `Draf nomor ${regNum} tersimpan. Anda dapat melanjutkannya kapan saja.`
-        : `Pengajuan nomor ${regNum} berhasil dikirim ke Kantor Desa Adimulya. Petugas akan segera memverifikasi berkas Anda.`,
+        : `Pengajuan permohonan ${service.title} dengan nomor registrasi ${regNum} berhasil dikirim ke Kantor Desa Adimulya. Petugas akan segera memverifikasi berkas Anda.`,
       timestamp: nowIso,
       isRead: false,
       type: isDraft ? 'info' : 'success',
@@ -467,6 +624,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast('Dokumen perbaikan berhasil dikirimkan ke petugas.', 'success');
   };
 
+  // Admin updates submission status & generates real citizen notification
   const updateSubmissionStatus = (
     submissionId: string,
     status: ApplicationStatus,
@@ -484,7 +642,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       statusLabel = 'Dokumen Membutuhkan Perbaikan';
       notifType = 'warning';
     } else if (status === 'disetujui') {
-      statusLabel = 'Pengajuan Disetujui';
+      statusLabel = 'Pengajuan Disetujui (Siap Diambil)';
       notifType = 'success';
     } else if (status === 'selesai') {
       statusLabel = 'Pelayanan Selesai & Dokumen Terbit';
@@ -501,7 +659,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ...sub,
             status,
             updatedAt: nowIso,
-            adminNotes: adminNotes || sub.adminNotes,
+            adminNotes: adminNotes !== undefined && adminNotes.trim() ? adminNotes : sub.adminNotes,
             officialLetterNo: officialLetterNo || sub.officialLetterNo,
             timeline: [
               ...sub.timeline,
@@ -510,23 +668,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 timestamp: nowIso,
                 title: statusLabel,
                 description:
-                  adminNotes ||
+                  (adminNotes && adminNotes.trim()) ||
                   (status === 'selesai'
-                    ? 'Surat resmi telah selesai diterbitkan dengan tanda tangan elektronik Kepala Desa Adimulya.'
-                    : `Status permohonan diubah menjadi: ${status}.`),
+                    ? 'Surat resmi telah selesai diterbitkan dengan tanda tangan resmi Pemerintah Desa Adimulya.'
+                    : `Status permohonan surat diperbarui menjadi: ${statusLabel}.`),
                 actor: 'Drs. Hendro Wibowo (Petugas Pelayanan)',
                 status,
               },
             ],
           };
 
-          // Also notify citizen
+          // Citizen Notification
+          const notificationMessage =
+            adminNotes && adminNotes.trim()
+              ? `Catatan Petugas: "${adminNotes}". Status surat ${sub.registrationNo} kini: ${statusLabel}.`
+              : `Status permohonan surat "${sub.serviceTitle}" (${sub.registrationNo}) telah diperbarui menjadi: ${statusLabel}.`;
+
           const notifMsg: NotificationItem = {
-            id: `notif-update-${Date.now()}`,
+            id: `notif-update-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             title: `${statusLabel}: ${sub.serviceTitle}`,
-            message:
-              adminNotes ||
-              `Status pengajuan Anda nomor ${sub.registrationNo} telah diperbarui menjadi ${status}.`,
+            message: notificationMessage,
             timestamp: nowIso,
             isRead: false,
             type: notifType,
@@ -549,6 +710,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
 
     showToast(`Status pengajuan berhasil diubah menjadi: ${statusLabel}`, 'success');
+  };
+
+  // Delete submission feature
+  const deleteSubmission = (submissionId: string) => {
+    setSubmissions((prev) => prev.filter((sub) => sub.id !== submissionId));
+    setNotifications((prev) => prev.filter((n) => n.applicationId !== submissionId));
+    if (selectedSubmission?.id === submissionId) {
+      setSelectedSubmission(null);
+    }
+    showToast('Permohonan surat berhasil dihapus dari sistem.', 'success');
   };
 
   const updateCitizenByAdmin = (updated: CitizenProfile) => {
@@ -591,11 +762,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCitizen(defaultCitizenProfile);
     setAllCitizens(otherCitizens);
     setFamilyCards(defaultFamilyCards);
-    setSubmissions(initialSubmissions);
-    setNotifications(initialNotifications);
+    setSubmissions([]);
+    setNotifications([]);
     setHasCompletedOnboarding(false);
     setIsOnboardingOpen(false);
-    showToast('Data demo berhasil di-reset ke data awal.', 'info');
+    showToast('Data permohonan berhasil dikosongkan.', 'info');
   };
 
   return (
@@ -619,7 +790,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSelectedServiceForForm,
         selectedOfficialDoc,
         setSelectedOfficialDoc,
+        isLoggedInWarga,
+        isLoggedInAdmin,
         login,
+        loginAdmin,
         register,
         verifyOtp,
         logout,
@@ -631,6 +805,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createSubmission,
         resubmitRevision,
         updateSubmissionStatus,
+        deleteSubmission,
         updateCitizenByAdmin,
         unreadCountWarga,
         unreadCountAdmin,

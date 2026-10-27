@@ -7,6 +7,7 @@ import { DocumentPreviewModal } from './components/common/DocumentPreviewModal';
 import { PublicNavbar } from './components/public/PublicNavbar';
 import { LandingPage } from './components/public/LandingPage';
 import { LoginView, RegisterView, OtpVerificationView } from './components/public/AuthViews';
+import { AdminLoginView } from './components/public/AdminLoginView';
 
 // Citizen views
 import { CitizenLayout } from './components/citizen/CitizenLayout';
@@ -57,6 +58,15 @@ const MainContent: React.FC = () => {
           <PublicNavbar />
           <main className="flex-1">
             <LoginView />
+          </main>
+        </>
+      )}
+
+      {currentView === 'admin-login' && (
+        <>
+          <PublicNavbar />
+          <main className="flex-1">
+            <AdminLoginView />
           </main>
         </>
       )}

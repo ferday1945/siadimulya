@@ -4,7 +4,14 @@ import { VillageLogo } from '../common/VillageLogo';
 import { Menu, X, User, Shield } from 'lucide-react';
 
 export const PublicNavbar: React.FC = () => {
-  const { setCurrentView, switchRole } = useApp();
+  const {
+    setCurrentView,
+    switchRole,
+    isLoggedInWarga,
+    isLoggedInAdmin,
+    citizen,
+    logout,
+  } = useApp();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const scrollToSection = (id: string) => {
@@ -64,30 +71,75 @@ export const PublicNavbar: React.FC = () => {
 
           {/* Zone 3: 1 primary action group */}
           <div className="hidden lg:flex items-center gap-3 shrink-0">
-            <button
-              onClick={() => switchRole('admin')}
-              className="px-3 py-2 text-xs font-medium text-slate-700 hover:text-emerald-700 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0"
-            >
-              <Shield className="w-3.5 h-3.5 text-slate-500" />
-              Petugas Desa
-            </button>
-            <button
-              onClick={() => setCurrentView('login')}
-              className="px-4 py-2 text-xs font-semibold text-white bg-[#198754] hover:bg-emerald-700 rounded-lg shadow-xs transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0"
-            >
-              <User className="w-3.5 h-3.5" />
-              Login Warga
-            </button>
+            {isLoggedInAdmin ? (
+              <>
+                <button
+                  onClick={() => setCurrentView('admin')}
+                  className="px-3.5 py-2 text-xs font-semibold text-slate-800 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  <Shield className="w-3.5 h-3.5 text-emerald-600" />
+                  Portal Petugas (Aktif)
+                </button>
+                <button
+                  onClick={logout}
+                  className="px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                >
+                  Keluar
+                </button>
+              </>
+            ) : isLoggedInWarga ? (
+              <>
+                <button
+                  onClick={() => setCurrentView('citizen')}
+                  className="px-3.5 py-2 text-xs font-semibold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  <User className="w-3.5 h-3.5 text-emerald-600" />
+                  Portal Warga ({citizen.nama})
+                </button>
+                <button
+                  onClick={logout}
+                  className="px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                >
+                  Keluar
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => setCurrentView('admin-login')}
+                  className="px-3 py-2 text-xs font-medium text-slate-700 hover:text-emerald-700 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <Shield className="w-3.5 h-3.5 text-slate-500" />
+                  Petugas Desa
+                </button>
+                <button
+                  onClick={() => setCurrentView('login')}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-[#198754] hover:bg-emerald-700 rounded-lg shadow-xs transition-colors flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  Login Warga
+                </button>
+              </>
+            )}
           </div>
 
           {/* Mobile hamburger */}
           <div className="flex md:hidden items-center gap-2">
-            <button
-              onClick={() => setCurrentView('login')}
-              className="px-3 py-1.5 text-xs font-semibold text-white bg-[#198754] rounded-lg shadow-xs"
-            >
-              Login
-            </button>
+            {!isLoggedInWarga && !isLoggedInAdmin ? (
+              <button
+                onClick={() => setCurrentView('login')}
+                className="px-3 py-1.5 text-xs font-semibold text-white bg-[#198754] rounded-lg shadow-xs"
+              >
+                Login
+              </button>
+            ) : (
+              <button
+                onClick={() => setCurrentView(isLoggedInAdmin ? 'admin' : 'citizen')}
+                className="px-3 py-1.5 text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg"
+              >
+                Portal
+              </button>
+            )}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 text-slate-600 hover:text-slate-900 rounded-lg hover:bg-slate-100"
@@ -124,7 +176,7 @@ export const PublicNavbar: React.FC = () => {
             onClick={() => scrollToSection('tentang')}
             className="block w-full text-left py-2 px-3 rounded-md text-slate-700 hover:bg-slate-50 font-medium"
           >
-            Tentang Desa
+            Tentang Desa Adimulya
           </button>
           <button
             onClick={() => scrollToSection('kontak')}
@@ -133,24 +185,70 @@ export const PublicNavbar: React.FC = () => {
             Kontak Balai Desa
           </button>
           <div className="pt-2 border-t border-slate-100 flex flex-col gap-2">
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setCurrentView('login');
-              }}
-              className="w-full py-2.5 text-center text-xs font-semibold text-white bg-[#198754] rounded-lg shadow-xs"
-            >
-              Login Warga
-            </button>
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                switchRole('admin');
-              }}
-              className="w-full py-2.5 text-center text-xs font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200"
-            >
-              Portal Petugas Desa (Admin)
-            </button>
+            {isLoggedInWarga ? (
+              <>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setCurrentView('citizen');
+                  }}
+                  className="w-full py-2.5 text-center text-xs font-semibold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-lg"
+                >
+                  Buka Portal Warga ({citizen.nama})
+                </button>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="w-full py-2 text-center text-xs font-medium text-rose-600 bg-rose-50 rounded-lg"
+                >
+                  Keluar dari Akun
+                </button>
+              </>
+            ) : isLoggedInAdmin ? (
+              <>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setCurrentView('admin');
+                  }}
+                  className="w-full py-2.5 text-center text-xs font-semibold text-slate-800 bg-slate-100 rounded-lg"
+                >
+                  Buka Portal Petugas Desa
+                </button>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    logout();
+                  }}
+                  className="w-full py-2 text-center text-xs font-medium text-rose-600 bg-rose-50 rounded-lg"
+                >
+                  Keluar dari Akun
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setCurrentView('login');
+                  }}
+                  className="w-full py-2.5 text-center text-xs font-semibold text-white bg-[#198754] rounded-lg shadow-xs"
+                >
+                  Login Warga
+                </button>
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setCurrentView('admin-login');
+                  }}
+                  className="w-full py-2.5 text-center text-xs font-medium text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200"
+                >
+                  Petugas Desa (Admin)
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}
